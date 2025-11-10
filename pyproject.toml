@@ -7,3 +7,16 @@ exclude = ["venv",".venv","build","dist"]
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+plugins = []
+ignore_missing_imports = true
+follow_imports = "silent"
+show_error_codes = true
+warn_unused_configs = true
+allow_redefinition = true
+
+[tool.bandit]
+target = ["app/"]
+exclude_dirs = ["tests"]
