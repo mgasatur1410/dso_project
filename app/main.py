@@ -1,4 +1,9 @@
-from fastapi import FastAPI, HTTPException, Request
+import asyncio
+import os
+import uuid
+
+import httpx
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 app = FastAPI(title="SecDev Course App", version="0.1.0")
@@ -11,22 +16,43 @@ class ApiError(Exception):
         self.status = status
 
 
+def build_problem(
+    request: Request, status: int, title: str, detail: str, type_: str = "about:blank"
+):
+    correlation_id = str(uuid.uuid4())
+    return {
+        "type": type_,
+        "title": title,
+        "status": status,
+        "detail": detail,
+        "instance": str(request.url),
+        "correlation_id": correlation_id,
+    }
+
+
 @app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError):
-    return JSONResponse(
-        status_code=exc.status,
-        content={"error": {"code": exc.code, "message": exc.message}},
+    pb = build_problem(
+        request,
+        status=exc.status,
+        title=exc.code,
+        detail=exc.message,
+        type_="https://example.com/errors/" + exc.code,
     )
+    return JSONResponse(status_code=exc.status, content=pb)
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    # Normalize FastAPI HTTPException into our error envelope
     detail = exc.detail if isinstance(exc.detail, str) else "http_error"
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": {"code": "http_error", "message": detail}},
+    pb = build_problem(
+        request,
+        status=exc.status_code,
+        title="http_error",
+        detail=detail,
+        type_="https://example.com/errors/http",
     )
+    return JSONResponse(status_code=exc.status_code, content=pb)
 
 
 @app.get("/health")
@@ -55,3 +81,53 @@ def get_item(item_id: int):
         if it["id"] == item_id:
             return it
     raise ApiError(code="not_found", message="item not found", status=404)
+
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+SAFE_MIME = {"image/png": b"\x89PNG", "image/jpeg": b"\xFF\xD8\xFF"}
+MAX_UPLOAD_SIZE = 1024 * 1024  # 1 MiB
+
+
+@app.post("/upload")
+def upload_file(file: UploadFile = File(...)):
+    file_data = file.file.read(MAX_UPLOAD_SIZE + 1)
+    if len(file_data) > MAX_UPLOAD_SIZE:
+        raise ApiError(code="too_large", message="file too big", status=422)
+    if file.content_type not in SAFE_MIME:
+        raise ApiError(code="mime_invalid", message="bad MIME", status=422)
+    magic = SAFE_MIME[file.content_type]
+    if not file_data.startswith(magic):
+        raise ApiError(code="magic_invalid", message="bad file signature", status=422)
+    fname = f"{uuid.uuid4()}.bin"
+    path = os.path.join(UPLOAD_DIR, fname)
+    if not os.path.abspath(path).startswith(os.path.abspath(UPLOAD_DIR)):
+        raise ApiError(code="path_traversal", message="bad filename", status=400)
+    with open(path, "wb") as f:
+        f.write(file_data)
+    return {"result": "ok", "file_id": fname}
+
+
+async def safe_http_request(url: str, timeout: float = 3.0, retries: int = 3):
+    delay = 0.25
+    for attempt in range(retries):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                return resp.text
+        except (httpx.RequestError, httpx.TimeoutException):
+            if attempt == retries - 1:
+                raise ApiError(
+                    code="http_call_failed",
+                    message=f"failed after {retries} attempts",
+                    status=502,
+                )
+            await asyncio.sleep(delay)
+            delay *= 2
+
+
+@app.get("/external_proxy")
+async def external_proxy(url: str):
+    data = await safe_http_request(url)
+    return {"proxied": data[:100]}
