@@ -1,10 +1,10 @@
 import asyncio
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
-import logging
-from typing import Dict, Any
+from decimal import Decimal
+from typing import Any, Dict
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
 app = FastAPI(title="SecDev Course App", version="0.1.0")
+
 
 # PII log masking utility
 def mask_pii(data: dict) -> dict:
@@ -22,9 +23,11 @@ def mask_pii(data: dict) -> dict:
             masked["email"] = val[:2] + "***@***" + val[-3:] if "@" in val else "***"
     return masked
 
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("secdev")
+
 
 class ApiError(Exception):
     def __init__(self, code: str, message: str, status: int = 400):
@@ -149,6 +152,7 @@ async def external_proxy(url: str):
     data = await safe_http_request(url)
     return {"proxied": data[:100]}
 
+
 # Advanced Payment Pydantic model
 class Payment(BaseModel):
     model_config = dict(extra="forbid")
@@ -158,8 +162,10 @@ class Payment(BaseModel):
     recipient_email: str = Field(min_length=5, max_length=64)
     occurred_at: datetime
 
+
 def normalize(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
 
 @app.post("/payments")
 def create_payment(payment: dict):
@@ -169,8 +175,6 @@ def create_payment(payment: dict):
         p = Payment.model_validate(payment)
     except ValidationError as e:
         raise ApiError(code="validation_error", message=str(e), status=422)
-    # Normalize datetime
-    occurred_utc = normalize(p.occurred_at)
     safe_log = mask_pii(p.model_dump())
-    logger.info(f"Payment created: %s", safe_log)
+    logger.info("Payment created: %s", safe_log)
     return {"result": "ok"}

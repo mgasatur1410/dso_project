@@ -59,6 +59,7 @@ def test_payment_float_amount():
     assert r.status_code == 422
     assert "Decimal" in r.text or "amount" in r.text  # Validation error
 
+
 def test_payment_bad_date():
     payment = {
         "amount": "10.00",
@@ -71,21 +72,24 @@ def test_payment_bad_date():
     assert r.status_code == 422
     assert "occurred_at" in r.text or "date" in r.text
 
+
 def test_payment_sender_too_long():
     payment = {
         "amount": "10.00",
         "currency": "USD",
         "sender": "X" * 80,
         "recipient_email": "test@example.com",
-        "occurred_at": "2024-01-01T10:00:00Z"
+        "occurred_at": "2024-01-01T10:00:00Z",
     }
     r = client.post("/payments", json=payment)
     assert r.status_code == 422
     assert "sender" in r.text
 
+
 def test_masked_pii_in_log():
     # Here we check that mask_pii utility masks emails (this is for coverage, pseudo-log)
     from app.main import mask_pii
+
     data = {"email": "alice@example.com"}
     masked = mask_pii(data)
     assert masked["email"].startswith("al***@***")
