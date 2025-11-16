@@ -1,20 +1,24 @@
 # Build stage
 FROM python:3.11-slim AS build
 WORKDIR /app
-COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN pytest -q
 
-# Runtime stage
-FROM python:3.11-slim
-WORKDIR /app
-RUN useradd -m appuser
-COPY --from=build /usr/local/lib/python3.11 /usr/local/lib/python3.11
-COPY --from=build /usr/local/bin /usr/local/bin
-COPY . .
-EXPOSE 8000
-HEALTHCHECK CMD curl -f http://localhost:8000/health || exit 1
-USER appuser
+FROM build AS test
+RUN pip install --no-cache-dir -r requirements-dev.txt && pytest -q
+
+FROM python:3.11-slim AS runtime
 ENV PYTHONUNBUFFERED=1
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+WORKDIR /app
+RUN groupadd -r app && useradd --no-log-init -r -g app app && mkdir -p /app && chown app:app /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN chmod -R o-w /app
+
+EXPOSE 8000
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s CMD curl -fsS http://localhost:8000/health || exit 1
+USER app
+ENTRYPOINT ["uvicorn"]
+CMD ["app.main:app", "--host", "0.0.0.0", "--port", "8000"]

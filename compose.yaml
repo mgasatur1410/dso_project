@@ -1,8 +1,20 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+    image: secdev-app:latest
+    container_name: secdev-app
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-    profiles: ["dev"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    cap_drop:
+      - ALL
+    read_only: false
+    user: "1000:1000"
+    restart: unless-stopped
