@@ -16,5 +16,7 @@ services:
     cap_drop:
       - ALL
     read_only: false
+    volumes:
+      - ./uploads:/app/app/uploads
     user: "1000:1000"
     restart: unless-stopped
