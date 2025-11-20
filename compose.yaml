@@ -2,6 +2,8 @@ services:
   app:
     build:
       context: .
+      dockerfile: Dockerfile
+      target: runtime
     image: secdev-app:latest
     container_name: secdev-app
     ports:
@@ -13,18 +15,69 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+      start_period: 5s
+    # Security hardening: ограничение capabilities
     cap_drop:
       - ALL
+    # Security hardening: read-only файловая система (кроме tmpfs)
     read_only: true
+    tmpfs:
+      - /tmp
+      - /app/uploads
+    # Security hardening: запуск под non-root пользователем
     user: "1000:1000"
+    # Security hardening: запрет на получение новых привилегий
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
-    # depends_on для расширения (например, db)
-    # depends_on:
-    #   - db
-#  db:
-#    image: postgres:16-alpine
-#    environment:
-#      - POSTGRES_DB=...
-#      - POSTGRES_USER=...
-#      - POSTGRES_PASSWORD=...
-#    ...
+    networks:
+      - secdev-network
+
+  # Пример расширения: PostgreSQL для будущего использования
+  # Раскомментируйте при необходимости подключения БД
+  # db:
+  #   image: postgres:16-alpine
+  #   container_name: secdev-db
+  #   environment:
+  #     - POSTGRES_DB=secdev_db
+  #     - POSTGRES_USER=secdev_user
+  #     - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+  #   secrets:
+  #     - postgres_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - secdev-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U secdev_user"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Пример расширения: Redis для кеширования
+  # Раскомментируйте при необходимости кеша
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: secdev-redis
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - secdev-network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
+
+networks:
+  secdev-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
+#   redis_data:
+
+# secrets:
+#   postgres_password:
+#     file: ./secrets/postgres_password.txt
