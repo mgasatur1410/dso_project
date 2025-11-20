@@ -5,9 +5,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
+# Test/run stage (опционально)
 FROM build AS test
 RUN pip install --no-cache-dir -r requirements-dev.txt && pytest -q
 
+# Production runtime stage
 FROM python:3.11-slim AS runtime
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app

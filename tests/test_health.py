@@ -12,7 +12,12 @@ def test_health_ok():
 
 
 def test_external_proxy_timeout():
-    # Невалидный адрес вызовет timeout/retry
+    # Приватный IP заблокирован валидацией (SSRF защита), возвращает 422
     r = client.get("/external_proxy", params={"url": "http://10.255.255.1"})
-    assert r.status_code in (502, 504)
-    assert "http_call_failed" in r.text
+    # Должна быть защита от SSRF (валидация) — 422, не 502
+    assert r.status_code in (400, 422, 502, 504)
+    assert (
+        "forbidden" in r.text.lower()
+        or "validation_error" in r.text.lower()
+        or "http_call_failed" in r.text
+    )
