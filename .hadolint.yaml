@@ -1,0 +1,33 @@
+# Hadolint конфигурация для проекта DSO (P07 C4 2**)
+# Настройки специфичны для нашего Python-приложения
+
+# Игнорируемые правила с обоснованием
+ignored:
+  # DL3008: apt-get установка без версии - игнорируем для curl (минимальные пакеты)
+  - DL3008
+  # DL3013: pip install без версии - игнорируем, версии зафиксированы в requirements.txt
+  - DL3013
+  # DL4006: не используем pipefail в RUN с pipe - наши команды не критичны
+  # (если нужно включить, уберите из ignored)
+  # - DL4006
+
+# Список доверенных реестров Docker
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - ghcr.io
+
+# Уровень строгости проверок
+failure-threshold: warning
+
+# Лейблы, которые должны быть в образе (можно раскомментировать при необходимости)
+# label-schema:
+#   author: text
+#   version: semver
+#   maintainer: text
+
+# Настройка для multi-stage builds
+# Разрешаем использование временных образов без явных тегов
+no-fail: false
+no-color: false
+format: json

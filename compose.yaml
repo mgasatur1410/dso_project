@@ -29,6 +29,11 @@ services:
     # Security hardening: запрет на получение новых привилегий
     security_opt:
       - no-new-privileges:true
+      # AppArmor профиль (требует установки на хосте)
+      # Установка: sudo apparmor_parser -r -W apparmor/docker-secdev-app
+      - apparmor=docker-secdev-app
+      # Seccomp профиль (ограничение syscalls)
+      - seccomp=./seccomp.json
     restart: unless-stopped
     networks:
       - secdev-network
