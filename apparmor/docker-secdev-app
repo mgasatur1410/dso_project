@@ -1,0 +1,75 @@
+# AppArmor профиль для secdev-app контейнера (P07 C2 2**)
+# Ограничивает доступ приложения к файловой системе и ресурсам
+
+#include <tunables/global>
+
+profile docker-secdev-app flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+
+  # Сетевые возможности
+  network inet tcp,
+  network inet udp,
+  network inet6 tcp,
+  network inet6 udp,
+
+  # Доступ к файловой системе
+  # Разрешаем чтение основных системных файлов
+  /etc/ld.so.cache r,
+  /etc/ld.so.preload r,
+  /etc/ld.so.conf r,
+  /etc/ld.so.conf.d/ r,
+  /etc/ld.so.conf.d/** r,
+  /lib/x86_64-linux-gnu/** rm,
+  /usr/lib/x86_64-linux-gnu/** rm,
+  /usr/lib/python3.11/** r,
+  /usr/local/lib/python3.11/** r,
+
+  # Доступ к приложению (только чтение)
+  /app/ r,
+  /app/** r,
+
+  # Доступ к uploads (запись разрешена)
+  /app/uploads/ rw,
+  /app/uploads/** rw,
+
+  # Временные файлы
+  /tmp/ rw,
+  /tmp/** rw,
+
+  # Python-специфичные пути
+  /usr/bin/python3.11 ix,
+  /usr/local/bin/python3.11 ix,
+  /usr/local/bin/uvicorn ix,
+
+  # Proc файлы (необходимы для работы приложения)
+  @{PROC}/ r,
+  @{PROC}/sys/kernel/random/boot_id r,
+  @{PROC}/sys/kernel/osrelease r,
+  @{PROC}/@{pid}/ r,
+  @{PROC}/@{pid}/fd/ r,
+  @{PROC}/@{pid}/stat r,
+  @{PROC}/@{pid}/status r,
+
+  # Запреты (явно блокируем опасные операции)
+  deny /sys/kernel/security/** rwx,
+  deny /proc/sys/kernel/core_pattern w,
+  deny /proc/kcore r,
+  deny /boot/** r,
+  deny /root/** rwx,
+  deny /home/** rwx,
+
+  # Capabilities (минимальный набор)
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+
+  # Запрет на монтирование
+  deny mount,
+  deny umount,
+  deny pivot_root,
+
+  # Запрет на изменение namespace
+  deny change_profile,
+  deny ptrace,
+}

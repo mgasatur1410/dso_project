@@ -25,6 +25,11 @@ pre-commit run --all-files
 ## Тесты
 ```bash
 pytest -q
+# С coverage (требуется ≥80%)
+pytest --cov=app --cov-report=term-missing
+# HTML отчёт
+pytest --cov=app --cov-report=html
+# Затем открыть htmlcov/index.html
 ```
 
 ## CI

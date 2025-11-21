@@ -15,3 +15,8 @@ build/
 htmlcov/
 node_modules/
 .env
+tests/
+docs/
+*.md
+*Dockerfile*
+compose.yaml
