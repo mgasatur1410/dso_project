@@ -29,15 +29,16 @@ jobs:
         run: |
           mkdir -p EVIDENCE/P09
 
-      - name: Generate SBOM (Syft CycloneDX JSON)
-        # Pin Syft image for reproducibility
+      - name: Generate SBOM (Syft JSON)
+        # Pin Syft image for reproducibility.
+        # Use syft-json format which is natively supported by Grype.
         run: |
           docker run --rm \
             -v "${PWD}:/work" \
             -w /work \
             anchore/syft:v1.20.0 \
             packages dir:. \
-            -o cyclonedx-json \
+            -o syft-json \
             > EVIDENCE/P09/sbom.json
 
       - name: Run SCA on SBOM (Grype JSON)
