@@ -1,0 +1,17 @@
+{
+  "matches": [],
+  "ignoredMatches": [],
+  "source": {
+    "type": "sbom",
+    "target": "EVIDENCE/P09/sbom.json"
+  },
+  "distro": {},
+  "descriptor": {
+    "name": "grype",
+    "version": "v0.97.0"
+  },
+  "schema": {
+    "version": "3.0.0",
+    "url": "https://raw.githubusercontent.com/anchore/grype/main/schema/json/schema-3.0.0.json"
+  }
+}

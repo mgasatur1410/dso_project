@@ -32,42 +32,27 @@ jobs:
       - name: Generate SBOM (Syft JSON)
         # Pin Syft image for reproducibility.
         # Use syft-json format which is natively supported by Grype.
+        # Updated to latest stable version for better vulnerability detection.
         run: |
           docker run --rm \
             -v "${PWD}:/work" \
             -w /work \
-            anchore/syft:v1.20.0 \
+            anchore/syft:v1.38.0 \
             packages dir:. \
             -o syft-json \
             > EVIDENCE/P09/sbom.json
 
       - name: Run SCA on SBOM (Grype JSON)
-        # Pin Grype image to keep reports reproducible between runs
+        # Pin Grype image to keep reports reproducible between runs.
+        # Updated to latest stable version for better vulnerability detection.
         run: |
           docker run --rm \
             -v "${PWD}:/work" \
             -w /work \
-            anchore/grype:v0.77.0 \
+            anchore/grype:v0.97.0 \
             sbom:/work/EVIDENCE/P09/sbom.json \
             -o json \
             > EVIDENCE/P09/sca_report.json
-
-      - name: Generate SCA summary (severity aggregation)
-        run: |
-          echo "# SCA summary" > EVIDENCE/P09/sca_summary.md
-          echo "" >> EVIDENCE/P09/sca_summary.md
-
-          if command -v jq >/dev/null 2>&1; then
-            echo "\`\`\`json" >> EVIDENCE/P09/sca_summary.md
-            jq '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add' \
-              EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md || echo "{}" >> EVIDENCE/P09/sca_summary.md
-            echo "\`\`\`" >> EVIDENCE/P09/sca_summary.md
-          else
-            echo "_jq not available on runner; summary not generated automatically_" >> EVIDENCE/P09/sca_summary.md
-          fi
-
-          echo "" >> EVIDENCE/P09/sca_summary.md
-          echo "Artifacts are generated for commit \`${{ github.sha }}\` in workflow run \`${{ github.run_id }}\`." >> EVIDENCE/P09/sca_summary.md
 
       - name: Attach policy waivers for traceability
         if: always()
@@ -84,6 +69,5 @@ jobs:
           path: |
             EVIDENCE/P09/sbom.json
             EVIDENCE/P09/sca_report.json
-            EVIDENCE/P09/sca_summary.md
             EVIDENCE/P09/waivers.snapshot.yml
           retention-days: 60

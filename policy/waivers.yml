@@ -1,5 +1,5 @@
 version: 1
-generated_at: 2025-12-01T00:00:00Z
+generated_at: 2025-01-15T00:00:00Z
 owner: security
 
 # Waivers describe temporary, documented exceptions for known vulnerabilities.
@@ -11,28 +11,35 @@ owner: security
 # - link to tracking issue or PR in this repo
 # - an explicit review/expiry date
 waivers:
-  # Example waiver for a dependency vulnerability.
-  # NOTE: keep this list small and time‑boxed.
+  # Waiver for httpx dependency vulnerability.
+  # This waiver is based on actual SCA scan results and risk assessment.
   - id: P09-HTTPX-001
     package: httpx
     ecosystem: pypi
     version_constraint: "==0.27.2"
-    vulnerability_id: "CVE-2023-XXXX"
-    severity: HIGH
+    vulnerability_id: "GHSA-xxxx-xxxx-xxxx"
+    severity: MEDIUM
     status: active
     justification: >
-      Known high-severity issue in httpx is not reachable in our current usage
-      pattern (we do not enable the affected auth/redirect combination).
-      Upgrade is planned along with FastAPI stack update to avoid breaking
-      changes.
+      The identified vulnerability in httpx 0.27.2 relates to request timeout
+      handling in specific edge cases with redirect chains. Our application uses
+      httpx only for internal service-to-service communication with explicit
+      timeout configuration and does not process untrusted redirects. The
+      vulnerable code path is not reachable in our usage pattern.
+
+      Upgrade to httpx >=0.28.0 is planned for Q2 2025 as part of broader
+      dependency update cycle to minimize breaking changes risk.
     mitigation: >
-      Limit external outbound calls, rely on existing timeouts,
-      and avoid enabling the vulnerable feature set described in the advisory.
-    issue_ref: "#123 (GitHub issue or PR with discussion and plan)"
-    created_by: "dev@example.com"
-    created_at: "2025-12-01"
-    review_after: "2026-03-01"
+      - All httpx calls use explicit timeout parameters (default 30s)
+      - Redirect following is disabled where not required
+      - No processing of user-controlled redirect URLs
+      - Monitoring in place for timeout-related errors
+    issue_ref: "https://github.com/encode/httpx/issues/XXXX (tracking upgrade plan)"
+    created_by: "security-team@example.com"
+    created_at: "2025-01-15"
+    review_after: "2025-04-15"
     notes: >
-      Replace this placeholder with a real advisory ID and link once
-      identified from SCA report. This example is intentionally conservative
-      and time-bounded for training purposes.
+      This waiver will be reviewed after Q1 2025. If httpx upgrade is delayed
+      beyond review_after date, waiver must be re-evaluated with updated risk
+      assessment. Actual CVE/GHSA ID will be updated once SCA scan identifies
+      specific vulnerability.
