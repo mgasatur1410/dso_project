@@ -1,0 +1,28 @@
+rules:
+  - id: python-httpx-missing-timeout
+    message: "HTTPX calls should set an explicit timeout to avoid hanging requests and SSRF amplification."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: availability
+      cwe: "CWE-400"
+      references:
+        - https://semgrep.dev/r?q=httpx
+        - https://docs.python-httpx.org/advanced/#timeout-configuration
+    patterns:
+      - pattern: httpx.$FUNC(...)
+      - pattern-not: httpx.$FUNC(..., timeout=$TIMEOUT, ...)
+
+  - id: python-decimal-from-float
+    message: "Avoid constructing Decimal from float; pass strings or ints to prevent precision loss in financial flows."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: correctness
+      cwe: "CWE-1339"
+      references:
+        - https://docs.python.org/3/library/decimal.html#avoiding-floats
+    patterns:
+      - pattern: Decimal($VALUE)
+      - pattern-not: Decimal("$VALUE")
+      - pattern-not: Decimal(str($VALUE))
