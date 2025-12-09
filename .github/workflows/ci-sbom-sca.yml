@@ -49,10 +49,21 @@ jobs:
           docker run --rm \
             -v "${PWD}:/work" \
             -w /work \
-            anchore/grype:v0.97.0 \
+            anchore/grype:v0.98.0 \
             sbom:/work/EVIDENCE/P09/sbom.json \
             -o json \
             > EVIDENCE/P09/sca_report.json
+
+      - name: Generate SCA summary (severity counts + commit binding)
+        run: |
+          SUMMARY=EVIDENCE/P09/sca_summary.md
+          echo "# SCA summary" > "$SUMMARY"
+          echo "commit: ${{ github.sha }}" >> "$SUMMARY"
+          echo "run_id: ${{ github.run_id }}" >> "$SUMMARY"
+          echo "run_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          echo "## Severity counts" >> "$SUMMARY"
+          jq -r '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add // {}' EVIDENCE/P09/sca_report.json >> "$SUMMARY"
 
       - name: Attach policy waivers for traceability
         if: always()
@@ -69,5 +80,6 @@ jobs:
           path: |
             EVIDENCE/P09/sbom.json
             EVIDENCE/P09/sca_report.json
+            EVIDENCE/P09/sca_summary.md
             EVIDENCE/P09/waivers.snapshot.yml
           retention-days: 60
