@@ -1,0 +1,16 @@
+{
+  "artifacts": [],
+  "source": {
+    "type": "directory",
+    "target": "."
+  },
+  "distro": {},
+  "descriptor": {
+    "name": "syft",
+    "version": "v1.38.0"
+  },
+  "schema": {
+    "version": "3.0.0",
+    "url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-3.0.0.json"
+  }
+}

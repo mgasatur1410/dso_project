@@ -33,8 +33,23 @@ pytest --cov=app --cov-report=html
 ```
 
 ## CI
-В репозитории настроен workflow **CI** (GitHub Actions) — required check для `main`.
+В репозитории настроены workflows **CI** (GitHub Actions) — required check для `main`.
 Badge добавится автоматически после загрузки шаблона в GitHub.
+
+### Workflows
+- **CI/CD** (`.github/workflows/ci.yml`) — линтинг, тесты, сборка контейнера, сканирование безопасности
+- **Security - SBOM & SCA** (`.github/workflows/ci-sbom-sca.yml`) — генерация SBOM и анализ уязвимостей зависимостей
+
+### EVIDENCE структура
+Директория `EVIDENCE/` содержит артефакты практик курса:
+- **`EVIDENCE/P09/`** — артефакты P09 (SBOM & SCA):
+  - `sbom.json` — Software Bill of Materials (Syft v1.38.0, формат syft-json)
+  - `sca_report.json` — отчёт об уязвимостях зависимостей (Grype v0.97.0)
+  - `waivers.snapshot.yml` — снэпшот политики waivers на момент прогона
+
+Артефакты генерируются автоматически в CI и доступны через GitHub Actions Artifacts.
+Имена артефактов содержат SHA коммита для трассировки: `p09-sbom-sca-<sha>`.
+Используются для DS-раздела итогового отчёта и управления уязвимостями.
 
 ## Контейнеры
 ```bash

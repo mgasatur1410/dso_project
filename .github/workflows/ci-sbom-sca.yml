@@ -1,0 +1,85 @@
+name: Security - SBOM & SCA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "requirements*.txt"
+      - "**/*.py"
+      - ".github/workflows/ci-sbom-sca.yml"
+
+concurrency:
+  group: sbom-sca-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sbom-sca:
+    name: Generate SBOM and run SCA
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare evidence directory
+        run: |
+          mkdir -p EVIDENCE/P09
+
+      - name: Generate SBOM (Syft JSON)
+        # Pin Syft image for reproducibility.
+        # Use syft-json format which is natively supported by Grype.
+        # Updated to latest stable version for better vulnerability detection.
+        run: |
+          docker run --rm \
+            -v "${PWD}:/work" \
+            -w /work \
+            anchore/syft:v1.38.0 \
+            packages dir:. \
+            -o syft-json \
+            > EVIDENCE/P09/sbom.json
+
+      - name: Run SCA on SBOM (Grype JSON)
+        # Pin Grype image to keep reports reproducible between runs.
+        # Updated to latest stable version for better vulnerability detection.
+        run: |
+          docker run --rm \
+            -v "${PWD}:/work" \
+            -w /work \
+            anchore/grype:v0.98.0 \
+            sbom:/work/EVIDENCE/P09/sbom.json \
+            -o json \
+            > EVIDENCE/P09/sca_report.json
+
+      - name: Generate SCA summary (severity counts + commit binding)
+        run: |
+          SUMMARY=EVIDENCE/P09/sca_summary.md
+          echo "# SCA summary" > "$SUMMARY"
+          echo "commit: ${{ github.sha }}" >> "$SUMMARY"
+          echo "run_id: ${{ github.run_id }}" >> "$SUMMARY"
+          echo "run_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          echo "## Severity counts" >> "$SUMMARY"
+          jq -r '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add // {}' EVIDENCE/P09/sca_report.json >> "$SUMMARY"
+
+      - name: Attach policy waivers for traceability
+        if: always()
+        run: |
+          if [ -f "policy/waivers.yml" ]; then
+            cp policy/waivers.yml EVIDENCE/P09/waivers.snapshot.yml
+          fi
+
+      - name: Upload SBOM & SCA artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p09-sbom-sca-${{ github.sha }}
+          path: |
+            EVIDENCE/P09/sbom.json
+            EVIDENCE/P09/sca_report.json
+            EVIDENCE/P09/sca_summary.md
+            EVIDENCE/P09/waivers.snapshot.yml
+          retention-days: 60
