@@ -56,6 +56,20 @@ jobs:
               --metrics=off \
               --sarif --output EVIDENCE/P10/semgrep.sarif || true
 
+      - name: Compact Semgrep SARIF if empty
+        if: always()
+        run: |
+          if [ -f EVIDENCE/P10/semgrep.sarif ]; then
+            RUNS_LEN=$(jq '.runs | length' EVIDENCE/P10/semgrep.sarif || echo 0)
+            if [ "$RUNS_LEN" -gt 0 ]; then
+              RES_LEN=$(jq '.runs[0].results | length' EVIDENCE/P10/semgrep.sarif || echo 0)
+              if [ "$RES_LEN" -eq 0 ]; then
+                jq -n '{ "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json", version: "2.1.0", runs: [ { tool: { driver: { name: "semgrep", informationUri: "https://semgrep.dev" } }, results: [], invocations: [ { executionSuccessful: true } ] } ] }' \
+                  > EVIDENCE/P10/semgrep.sarif
+              fi
+            fi
+          fi
+
       - name: Upload Semgrep SARIF to code scanning
         if: always()
         continue-on-error: true
