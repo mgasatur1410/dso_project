@@ -55,7 +55,7 @@ jobs:
         run: |
           docker run --rm --network="host" \
             -v "${PWD}/EVIDENCE/P11:/zap/wrk:rw" \
-            owasp/zap2docker-stable zap-baseline.py \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
               -t "http://localhost:8000/" \
               -r zap_baseline.html \
               -J zap_baseline.json \
