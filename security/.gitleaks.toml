@@ -8,27 +8,17 @@
 # Rules instruct gitleaks on what should be considered a secret.
 # Allowlists instruct gitleaks on what is allowed, i.e. not a secret.
 
-title = "gitleaks config"
+title = "gitleaks config (minimal)"
+
+# Подтягиваем дефолтные правила Gitleaks и добавляем только наш allowlist.
+extends = ["gitleaks://gitleaks.toml"]
 
 [allowlist]
-description = "global allow lists"
-paths = [
-    '''gitleaks.toml''',
-    '''(.*?)(jpg|gif|doc|docx|zip|xls|pdf|bin|svg|socket|vsidx|v2|suo|wsuo|.dll|pdb|exe)$''',
-    '''(go.mod|go.sum)$''',
-    '''gradle.lockfile''',
-    '''node_modules''',
-    '''package-lock.json''',
-    '''yarn.lock''',
-    '''pnpm-lock.yaml''',
-    '''Database.refactorlog''',
-    '''vendor''',
-]
 regexes = [
-    # GitHub Actions secret placeholders used in workflows — не настоящие секреты.
-    '''\\${{\\s*secrets\\.(JWT_SECRET_DEV|DB_URL_DEV|JWT_SECRET_STAGING|JWT_SECRET_PROD)\\s*}}''',
-    # Публичный контакт в SECURITY.md — не секрет.
-    '''mgasaturov@gmail\\.com''',
+  # Плейсхолдеры GitHub Actions секретов в workflow — не являются секретами.
+  '''\\${{\\s*secrets\\.(JWT_SECRET_DEV|DB_URL_DEV|JWT_SECRET_STAGING|JWT_SECRET_PROD)\\s*}}''',
+  # Публичный контакт в SECURITY.md.
+  '''mgasaturov@gmail\\.com''',
 ]
 
 [[rules]]
