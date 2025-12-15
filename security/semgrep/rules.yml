@@ -1,4 +1,28 @@
 rules:
+  - id: httpx-disable-cert-verification
+    languages: [python]
+    message: "Do not disable TLS verification in httpx calls (leaks MITM)."
+    severity: WARNING
+    metadata:
+      category: security
+      project: secdev-app
+      references:
+        - https://python-httpx.org/advanced/#ssl-certificates
+    pattern: |
+      httpx.AsyncClient(..., verify=False, ...)
+
+  - id: uploadfile-unsafe-filename-join
+    languages: [python]
+    message: "Avoid writing uploads using user-supplied filename; use UUID/path allowlist."
+    severity: WARNING
+    metadata:
+      category: security
+      project: secdev-app
+      references:
+        - https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
+    pattern: |
+      os.path.join($UPLOAD_DIR, $file.filename)
+
   - id: python-httpx-missing-timeout
     message: "HTTPX calls should set an explicit timeout to avoid hanging requests and SSRF amplification."
     severity: WARNING

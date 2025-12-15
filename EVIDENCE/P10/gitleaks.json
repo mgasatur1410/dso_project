@@ -1,5 +1,1 @@
-{
-  "source": "stub-local",
-  "description": "Placeholder report; CI workflow ci-sast-secrets will generate real findings.",
-  "findings": []
-}
+[]

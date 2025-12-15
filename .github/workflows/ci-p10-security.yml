@@ -1,0 +1,139 @@
+name: Security - P10 (SAST & Secrets)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/**"
+      - "security/**"
+      - "EVIDENCE/P10/**"
+      - ".github/workflows/ci-p10-security.yml"
+      - "pyproject.toml"
+      - "requirements*.txt"
+  pull_request:
+    paths:
+      - "app/**"
+      - "security/**"
+      - "EVIDENCE/P10/**"
+      - ".github/workflows/ci-p10-security.yml"
+      - "pyproject.toml"
+      - "requirements*.txt"
+
+concurrency:
+  group: p10-security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  sast-and-secrets:
+    name: Semgrep + Gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare evidence directory
+        run: mkdir -p EVIDENCE/P10
+
+      - name: Run Semgrep (p/ci + project rules)
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          docker run --rm \
+            -v "${PWD}:/src" \
+            -w /src \
+            returntocorp/semgrep:1.80.0 \
+            semgrep scan \
+              --config "p/ci" \
+              --config "security/semgrep/rules.yml" \
+              --exclude ".venv" \
+              --exclude "htmlcov" \
+              --sarif --output EVIDENCE/P10/semgrep.sarif
+
+      - name: Upload Semgrep SARIF to code scanning
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: EVIDENCE/P10/semgrep.sarif
+
+      - name: Run Gitleaks (with allowlist)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          docker run --rm \
+            -v "${PWD}:/repo" \
+            -w /repo \
+            zricethezav/gitleaks:8.18.4 detect \
+              --source /repo \
+              --config-path /repo/security/.gitleaks.toml \
+              --report-format json \
+              --report-path /repo/EVIDENCE/P10/gitleaks.json \
+              --no-banner
+
+      - name: Generate P10 summary (counts + links)
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from collections import Counter
+          from pathlib import Path
+          summary = Path("EVIDENCE/P10/p10_summary.md")
+          semgrep = Path("EVIDENCE/P10/semgrep.sarif")
+          gitleaks = Path("EVIDENCE/P10/gitleaks.json")
+
+          def semgrep_counts(path: Path):
+            if not path.exists():
+              return Counter()
+            data = json.loads(path.read_text())
+            c = Counter()
+            for run in data.get("runs", []):
+              for res in run.get("results", []):
+                level = res.get("level") or res.get("properties", {}).get("severity")
+                c[level or "unknown"] += 1
+            return c
+
+          def gitleaks_count(path: Path):
+            if not path.exists():
+              return 0
+            data = json.loads(path.read_text())
+            if isinstance(data, list):
+              return len(data)
+            for key in ("findings", "leaks"):
+              if key in data and isinstance(data[key], list):
+                return len(data[key])
+            return 0
+
+          sc = semgrep_counts(semgrep)
+          gl = gitleaks_count(gitleaks)
+          run_url = f"https://github.com/{os.environ.get('GITHUB_REPOSITORY','')}/actions/runs/{os.environ.get('GITHUB_RUN_ID','')}"
+          summary.write_text(
+            "\n".join(
+              [
+                "# P10 security summary",
+                f"commit: {os.environ.get('GITHUB_SHA','local-run')}",
+                f"run_url: {run_url}",
+                "",
+                "## Semgrep severity counts",
+                *(f"- {k}: {v}" for k, v in sc.items()),
+                "",
+                f"Gitleaks findings: {gl}",
+                "",
+                "Planned use: include SARIF/JSON in DS section and feed backlog triage.",
+              ]
+            )
+          )
+          PY
+
+      - name: Upload P10 artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p10-security-${{ github.sha }}
+          path: EVIDENCE/P10/
+          retention-days: 45
