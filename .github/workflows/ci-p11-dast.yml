@@ -49,7 +49,9 @@ jobs:
           exit 1
 
       - name: Prepare evidence directory
-        run: mkdir -p EVIDENCE/P11
+        run: |
+          mkdir -p EVIDENCE/P11
+          chmod 777 EVIDENCE/P11
 
       - name: Run ZAP baseline
         run: |
