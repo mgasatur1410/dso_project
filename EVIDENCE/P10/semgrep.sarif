@@ -7,16 +7,13 @@
         "driver": {
           "name": "semgrep",
           "informationUri": "https://semgrep.dev",
-          "version": "stub-local"
+          "version": "1.80.0"
         }
       },
       "results": [],
       "invocations": [
         {
-          "executionSuccessful": true,
-          "properties": {
-            "note": "Placeholder report; real data will be produced by CI workflow ci-sast-secrets."
-          }
+          "executionSuccessful": true
         }
       ]
     }

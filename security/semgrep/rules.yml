@@ -21,7 +21,7 @@ rules:
       references:
         - https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
     pattern: |
-      os.path.join($UPLOAD_DIR, $file.filename)
+      os.path.join($UPLOAD_DIR, $FILE.filename)
 
   - id: python-httpx-missing-timeout
     message: "HTTPX calls should set an explicit timeout to avoid hanging requests and SSRF amplification."
