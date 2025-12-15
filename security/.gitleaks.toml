@@ -1,0 +1,8 @@
+title = "gitleaks config (minimal)"
+extends = ["gitleaks://gitleaks.toml"]
+
+[allowlist]
+regexes = [
+  '''\${{\s*secrets\.(JWT_SECRET_DEV|DB_URL_DEV|JWT_SECRET_STAGING|JWT_SECRET_PROD)\s*}}''',
+  '''mgasaturov@gmail\.com''',
+]
