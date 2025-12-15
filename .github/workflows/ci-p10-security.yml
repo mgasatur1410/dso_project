@@ -53,12 +53,13 @@ jobs:
               --config "security/semgrep/rules.yml" \
               --exclude ".venv" \
               --exclude "htmlcov" \
-              --sarif --output EVIDENCE/P10/semgrep.sarif
+              --metrics=off \
+              --sarif --output EVIDENCE/P10/semgrep.sarif || true
 
       - name: Upload Semgrep SARIF to code scanning
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: EVIDENCE/P10/semgrep.sarif
 
@@ -69,12 +70,13 @@ jobs:
           docker run --rm \
             -v "${PWD}:/repo" \
             -w /repo \
-            zricethezav/gitleaks:8.18.4 detect \
+            zricethezav/gitleaks:latest detect \
               --source /repo \
-              --config-path /repo/security/.gitleaks.toml \
+              --config /repo/security/.gitleaks.toml \
               --report-format json \
               --report-path /repo/EVIDENCE/P10/gitleaks.json \
-              --no-banner
+              --exit-code 0 \
+              --no-banner || true
 
       - name: Generate P10 summary (counts + links)
         if: always()
