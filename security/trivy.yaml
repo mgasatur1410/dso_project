@@ -1,0 +1,5 @@
+vulnerability:
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM

@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  app:
+    image: secdev-app:local
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Конфигурируем приложение через env, без хардкода секретов в образе.
+      APP_ENV: "p12-iac"
+    restart: unless-stopped
