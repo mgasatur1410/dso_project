@@ -1,0 +1,7 @@
+ignored:
+  # DL3008: Pin versions in apt-get install
+  # Для учебного примера оставляем немного гибкости по версиям пакетов.
+  - DL3008
+  # DL3013: Pin versions in pip install
+  # Версии уже зафиксированы в requirements.txt, rule считаем избыточным.
+  - DL3013
