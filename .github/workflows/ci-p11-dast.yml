@@ -1,0 +1,78 @@
+name: Security - P11 (DAST ZAP baseline)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - "compose.yaml"
+      - ".github/workflows/ci-p11-dast.yml"
+      - "EVIDENCE/P11/**"
+
+concurrency:
+  group: p11-dast-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dast:
+    name: ZAP baseline DAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build app image
+        run: docker build -t secdev-app:latest .
+
+      - name: Run app container
+        run: |
+          docker run -d --name p11-app -p 8000:8000 secdev-app:latest
+
+      - name: Wait for health
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "App is up"
+              exit 0
+            fi
+            echo "Waiting for app..."
+            sleep 2
+          done
+          echo "App did not become healthy in time"
+          docker logs p11-app || true
+          exit 1
+
+      - name: Prepare evidence directory
+        run: |
+          mkdir -p EVIDENCE/P11
+          chmod 777 EVIDENCE/P11
+
+      - name: Run ZAP baseline
+        run: |
+          docker run --rm --network="host" \
+            -v "${PWD}/EVIDENCE/P11:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+              -t "http://localhost:8000/" \
+              -r zap_baseline.html \
+              -J zap_baseline.json \
+              -I || true
+
+      - name: Stop app container
+        if: always()
+        run: |
+          docker logs p11-app || true
+          docker rm -f p11-app || true
+
+      - name: Upload P11 DAST artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p11-dast-zap-${{ github.sha }}
+          path: EVIDENCE/P11/
+          retention-days: 30
